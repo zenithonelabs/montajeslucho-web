@@ -22,8 +22,8 @@ resource "aws_iam_role" "pipeline_oidc" {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.github_repository}:ref:refs/heads/${var.github_repository_branch}",
               "repo:${var.github_repository}:environment:production",
-              "repo:${var.github_repository_with_id}:ref:refs/heads/${var.github_repository_branch}",
-              "repo:${var.github_repository_with_id}:environment:production"
+              "${var.github_repository_with_id}:ref:refs/heads/${var.github_repository_branch}",
+              "${var.github_repository_with_id}:environment:production"
             ]
           }
         }
