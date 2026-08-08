@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  AWS_ROLE_ARN: arn:aws:iam::543634431649:role/pipeline-oidc-role
+  AWS_ROLE_ARN: arn:aws:iam::987682811532:role/pipeline-oidc-role
   AWS_REGION: eu-west-1
   S3_BUCKET: montajeslucho-web-frontend-prod-euwest1-s3
   CLOUDFRONT_DIST_ID: E3DZLRIAA2AOZV
