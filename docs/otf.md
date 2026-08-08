@@ -64,10 +64,10 @@ $ aws --version
    $ git clone <repository-url>
    ```
 
-2. Step into /infrastructure folder:
+2. Step into /src folder:
 
    ```
-   $ cd infrastructure
+   $ cd infrasructure
    ```
 
 3. Configure your AWS credentials:
@@ -76,7 +76,7 @@ $ aws --version
     $ aws configure
     AWS Access Key ID [****************RKCT]: AKIAX5EZDD2QXNBO5I5V
     AWS Secret Access Key [****************jYx6]: ...
-    Default region name [eu-west-1]: eu-west-1                              
+    Default region name [eu-north-1]: eu-west-1                              
     Default output format [None]: json
     ```
 
@@ -87,14 +87,16 @@ $ aws --version
     ```
     $ export AWS_ACCESS_KEY_ID=AKIA....
     $ export AWS_SECRET_ACCESS_KEY=xxxxxxxx
-    $ export AWS_DEFAULT_REGION=us-east-1
+    $ export AWS_DEFAULT_REGION=eu-west-1
     ```
 
 4. Initialize OpenTofu state
 
     ```console
-    $ tofu init
+    $ tofu init -var-file="prod.tfvars"
     ```
+
+    *Comment the backend.tf code to manage the state locally.
 
 5. Plan
 
@@ -110,7 +112,6 @@ $ aws --version
     $ tofu plan
     $ tofu plan -var-file="prod.tfvars"
     ```
-    
 
 6. Apply
 
@@ -118,10 +119,10 @@ $ aws --version
 
     ```console
     $ tofu apply "prod.tfplan"
-
+        ...
         Apply complete! Resources: 5 added, 0 changed, 0 destroyed.     
         Outputs:
-        cloudfront_url = "d3p8htm6l8mc4s.cloudfront.net"
+        ...
     ```
 
     Other apply commands
@@ -143,28 +144,13 @@ $ aws --version
     aws_s3_bucket_public_access_block.frontend
     ```
 
-8. Upload React artifacts to S3
-
-    ```console
-    cd frontend
-    ```
-
-    ```console
-    npm run build
-    ```
-
-    ```console
-    aws s3 sync dist/ s3://frontend-montajes-lucho
-    ```
-
-9. Access your web using the CloudFront URL from the OpenTofu apply output
-
 ## Instructions: Destroy Local OpenTofu
 
 If you need to delete all the infrastructure execute
 
-```console
-$ tofu destroy
+```console´
+$ tofu plan -var-file="prod.tfvars" -out="prod.tfplan" -destroy
+$ tofu apply "prod.tfplan"
 ```
 
 ## Instructions: Remote OpenTofu
@@ -172,32 +158,32 @@ $ tofu destroy
 To enable remote state management with OpenTofu, you must first create the infrastructure required to store the state remotely.
 
 This project uses the standard AWS backend pattern:
-- S3 Bucket: Stores the OpenTofu state file.
-- DynamoDB Table: Provides state locking to prevent multiple users or pipelines from applying changes simultaneously.
+- S3 Bucket: Stores the OpenTofu state file and provides state locking to prevent multiple users or pipelines from applying changes simultaneously.
 
 State locking ensures that only one OpenTofu operation runs at a time, preventing state corruption.
 
-1. Create the Backend Infrastructure using **bootstrap.tf** file and the following
+1. Create the Backend Infrastructure using **bootstrap.tf** file and the following code
 
     ```terraform
-    resource "aws_s3_bucket" "opentofu_state" {
-        bucket = var.opentofu_state_s3_bucket_name
+    resource "aws_s3_bucket" "otf_state_bucket" {
+        bucket = var.otf_state_s3_bucket_name
+        object_lock_enabled = true
 
         lifecycle {
-            prevent_destroy = true
+            prevent_destroy = false
         }
     }
 
-    resource "aws_s3_bucket_versioning" "state_versioning" {
-        bucket = aws_s3_bucket.opentofu_state.id
+    resource "aws_s3_bucket_versioning" "otf_state_bucket_versioning" {
+        bucket = aws_s3_bucket.otf_state_bucket.id
 
         versioning_configuration {
             status = "Enabled"
         }
     }
 
-    resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption" {
-        bucket = aws_s3_bucket.opentofu_state.id
+    resource "aws_s3_bucket_server_side_encryption_configuration" "otf_state_bucket_encryption" {
+        bucket = aws_s3_bucket.otf_state_bucket.id
 
         rule {
             apply_server_side_encryption_by_default {
@@ -206,36 +192,31 @@ State locking ensures that only one OpenTofu operation runs at a time, preventin
         }
     }
 
-    resource "aws_s3_bucket_public_access_block" "block_public_access" {
-        bucket = aws_s3_bucket.opentofu_state.id
+    resource "aws_s3_bucket_public_access_block" "otf_state_bucket_public_access_block" {
+        bucket = aws_s3_bucket.otf_state_bucket.id
 
-        block_public_acls   = true
-        block_public_policy = true
-        ignore_public_acls  = true
+        block_public_acls       = true
+        block_public_policy     = true
+        ignore_public_acls      = true
         restrict_public_buckets = true
     }
 
-    resource "aws_dynamodb_table" "opentofu_locks" {
-        name         = var.opentofu_lock_dynamodb_table_name
-        billing_mode = "PAY_PER_REQUEST"
-        hash_key     = "LockID"
+    resource "aws_s3_bucket_object_lock_configuration" "otf_state_bucket_lock" {
+        bucket = aws_s3_bucket.otf_state_bucket.id
 
-        attribute {
-            name = "LockID"
-            type = "S"
-        }
+        object_lock_enabled = "Enabled"
     }
     ```
 
-2.  Once the resources are created, configure the OpenTofu backend. Uncomment or add the OpenTofu backend to **backend.tf**.
+2.  Once the resources are created by running **tofu apply** locally, configure the OpenTofu backend. Uncomment or add the OpenTofu backend to **backend.tf**.
 
     ```terraform
     terraform {
         backend "s3" {
-            bucket         = var.opentofu_state_s3_bucket_name
-            key            = "infra/terraform.tfstate"
+            bucket         = var.otf_state_s3_bucket_name
+            key            = var.otf_state_s3_file_name
             region         = var.aws_region
-            dynamodb_table = var.opentofu_lock_dynamodb_table_name
+            use_lockfile   = true
             encrypt        = true
         }
     }
@@ -355,34 +336,11 @@ State locking ensures that only one OpenTofu operation runs at a time, preventin
     }
     ```
 
-    Apply the prevent_destroy policy:
-
-    ```console
-    tofu plan -var-file="prod.tfvars" -out="prod.tfplan"
-    tofu apply "prod.tfplan"
-    ```
-
     7. Destroy all the infrastructure
 
     Now that state is local, so it is safe to destroy everything:
 
-    ```console
-    tofu destroy -var-file="prod.tfvars"
+    ```console´
+    $ tofu plan -var-file="prod.tfvars" -out="prod.tfplan" -destroy
+    $ tofu apply "prod.tfplan"
     ```
-
-## AWS Infrastructure Resources
-
-> AWS Shield > Amazon CloudFront > AWS S3
-
-- AWS S3 is a storage service that serves and stores the static files from the web.
-
-- Amazon CloudFront is a Content Delivery Network (CDN) that serves globally the S3 static files reducing latency, elasticity and offering protection against several cyber attacks. It offers DDoS protection thanks to AWS Shield Free Tier plan, its Global Edge Network which handles traffic spikes and distributes the load, implements rate limiting with AWS WAF (if enabled with additional costs) and origin protection.
-
-- AWS Shield is a protection layer against several cyber attacks. AWS Shield Free Tier plan is enabled by default in all AWS Accounts.
-
-\* More on DDoS Protection on AWS with AWS Shield and AWS WAF | Amazon Web Services: https://www.youtube.com/watch?v=-9YzrRCzaKM
-
-\* Key Management Service (KMS) Charges: https://repost.aws/knowledge-center/kms-key-charges
-\* Unused Resources on the Bill: https://repost.aws/questions/QUtjF5iu1nTcqFlIfauh4Ppw/i-am-being-charged-for-resources-that-i-am-not-using-and-i-have-not-even-created-them
-
-

@@ -1,6 +1,6 @@
 # Create S3 bucket
 resource "aws_s3_bucket" "frontend" {
-  bucket = "frontend-montajes-lucho"
+  bucket = var.frontend_s3_bucket_name
 }
 
 # Block public access to the bucket

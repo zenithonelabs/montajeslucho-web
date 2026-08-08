@@ -21,8 +21,10 @@ resource "aws_iam_role" "pipeline_oidc" {
         Condition = {
             StringLike = {
             "token.actions.githubusercontent.com:sub" = [
-                "repo:cybertechcorp/montajes-lucho:ref:refs/heads/*",
-                "repo:cybertechcorp/montajes-lucho:environment:production"
+              "repo:${var.github_repository}:ref:refs/heads/${var.github_repository_branch}",
+              "repo:${var.github_repository}:environment:production",
+              "repo:${var.github_repository_with_id}:ref:refs/heads/${var.github_repository_branch}",
+              "repo:${var.github_repository_with_id}:environment:production"
             ]
             }
         }

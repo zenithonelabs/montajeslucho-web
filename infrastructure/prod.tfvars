@@ -1,0 +1,8 @@
+aws_account_id = "987682811532"
+aws_region = "eu-west-1"
+otf_state_s3_bucket_name = "montajeslucho-web-otf-prod-euwest1-s3"
+otf_state_s3_file_name = "zenithone/montajeslucho-web/terraform.tfstate"
+github_repository = "zenithonelabs/montajeslucho-web"
+github_repository_with_id = "repo:zenithonelabs@257135675/montajeslucho-web@1141886394"
+github_repository_branch = "main"
+frontend_s3_bucket_name = "montajeslucho-web-frontend-prod-euwest1-s3"
