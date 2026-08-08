@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "DEFAULT_MODEL": "qwen/qwen3.5-9b",
+    "ANTHROPIC_MODEL": "qwen/qwen3.5-9b",
+    "ANTHROPIC_BASE_URL": "http://192.168.1.39:1234",
+    "ANTHROPIC_AUTH_TOKEN": "sk-lm-5h3SzML4:fclapP3t8GKKxOMN30CX",
+    "LM_API_TOKEN": "sk-lm-5h3SzML4:fclapP3t8GKKxOMN30CX"
+  },
+  "permissions": {
+    "allow": ["Bash(curl *)"],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ]
+  },
+  "autoUpdatesChannel": "stable"
+}
